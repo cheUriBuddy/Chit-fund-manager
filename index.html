@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#0D1117"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ChitFund"/>
+<title>Chit Fund Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── Tokens ── */
+:root{
+  --bg:#0D1117; --card:#161B22; --card2:#1C2330; --border:#30363D;
+  --accent:#58A6FF; --green:#3FB950; --gold:#F0B429;
+  --danger:#F85149; --purple:#BC8CFF; --pink:#FF7EB6;
+  --text:#E6EDF3; --dim:#8B949E;
+  --r:14px; --rs:10px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);overflow:hidden;position:fixed;width:100%}
+
+/* ── App shell ── */
+#app{display:flex;flex-direction:column;position:fixed;inset:0;top:var(--safe-top);padding-bottom:calc(56px + var(--safe-bottom))}
+
+/* ── Header ── */
+#header{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+  flex-shrink:0;z-index:10;min-height:58px;
+}
+#title-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+#app-title{
+  font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;
+  color:var(--text);line-height:1.2;outline:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#app-subtitle{font-size:.7rem;color:var(--dim);outline:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[contenteditable="true"]{border-bottom:1.5px dashed var(--accent);padding-bottom:1px;min-width:20px}
+.coin{font-size:1.4rem;flex-shrink:0}
+#edit-btn{
+  background:none;border:none;font-size:1.1rem;cursor:pointer;
+  padding:8px;border-radius:8px;color:var(--dim);flex-shrink:0;line-height:1;
+  transition:background .15s;
+}
+#edit-btn:active{background:var(--card2)}
+
+/* ── Body area ── */
+#body{flex:1;overflow:hidden;position:relative}
+
+/* ── Views (screens) ── */
+.view{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .2s}
+.view.active{opacity:1;pointer-events:all}
+
+/* ── Bottom nav — always pinned ── */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);border-top:1px solid var(--border);
+  display:flex;z-index:50;
+  padding-bottom:var(--safe-bottom);
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:10px 4px 8px;cursor:pointer;
+  border:none;background:none;color:var(--dim);
+  font-size:.65rem;font-weight:600;font-family:'Inter',sans-serif;
+  transition:color .15s;letter-spacing:.03em;text-transform:uppercase;
+  min-height:56px;
+}
+.nav-item .nav-icon{font-size:1.3rem;line-height:1}
+.nav-item.active{color:var(--accent)}
+.nav-item:active{opacity:.7}
+
+/* ── Funds view ── */
+#funds-view{padding:16px 16px 0}
+.section-label{font-size:.68rem;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+#fund-scroll{flex:1;overflow-y:auto;padding-bottom:80px}
+.fund-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .15s,background .15s;
+}
+.fund-card:active{background:var(--card2)}
+.fund-card.active-fund{border-color:var(--accent);background:rgba(88,166,255,.07)}
+.fund-card-icon{font-size:1.5rem;flex-shrink:0}
+.fund-card-info{flex:1;min-width:0}
+.fund-card-name{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fund-card-meta{font-size:.75rem;color:var(--dim);margin-top:2px}
+.fund-card-badge{
+  background:rgba(88,166,255,.15);color:var(--accent);
+  border-radius:20px;font-size:.75rem;font-weight:600;
+  padding:3px 10px;flex-shrink:0;
+}
+.fund-card-actions{display:flex;gap:6px;flex-shrink:0}
+.icon-btn{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:8px;padding:7px 9px;font-size:.85rem;cursor:pointer;
+  color:var(--dim);line-height:1;transition:background .15s,color .15s;
+}
+.icon-btn:active{background:var(--border)}
+.icon-btn.danger{color:var(--danger);border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.08)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--dim);gap:8px;text-align:center}
+.empty-icon{font-size:3rem;opacity:.35}
+.empty-text{font-size:.88rem;line-height:1.5}
+
+/* ── FAB (Floating Action Button) ── */
+.fab{
+  position:fixed;bottom:calc(72px + var(--safe-bottom));right:20px;
+  background:var(--green);color:#0D1117;border:none;
+  border-radius:50%;width:56px;height:56px;
+  font-size:1.6rem;cursor:pointer;
+  box-shadow:0 4px 16px rgba(63,185,80,.35);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .15s,box-shadow .15s;z-index:5;
+}
+.fab:active{transform:scale(.93);box-shadow:0 2px 8px rgba(63,185,80,.25)}
+
+/* ── Members view ── */
+#members-view{}
+#members-topbar{
+  padding:14px 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+  border-bottom:1px solid var(--border);background:var(--card);
+}
+#members-topbar .back-btn{
+  background:none;border:none;color:var(--accent);font-size:.9rem;font-weight:600;
+  cursor:pointer;padding:6px 0;display:flex;align-items:center;gap:4px;
+  font-family:'Inter',sans-serif;white-space:nowrap;
+}
+#selected-fund-name{
+  font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#members-count-badge{
+  background:rgba(88,166,255,.15);color:var(--accent);
+  border-radius:20px;font-size:.72rem;font-weight:600;padding:3px 9px;flex-shrink:0;
+}
+
+#add-member-bar{
+  padding:12px 16px;display:flex;gap:8px;flex-shrink:0;
+  border-bottom:1px solid var(--border);
+}
+#name-input{
+  flex:1;background:var(--card2);border:1.5px solid var(--border);
+  border-radius:var(--rs);padding:12px 14px;color:var(--text);
+  font-size:1rem;font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+#name-input:focus{border-color:var(--accent)}
+#name-input::placeholder{color:var(--dim)}
+#add-btn{
+  background:var(--accent);color:#0D1117;border:none;
+  border-radius:var(--rs);padding:12px 18px;font-size:.92rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;font-family:'Inter',sans-serif;
+  transition:opacity .15s;flex-shrink:0;
+}
+#add-btn:active{opacity:.8}
+
+#member-list-wrap{flex:1;overflow-y:auto;padding-bottom:8px}
+.member-row{
+  display:flex;align-items:center;padding:14px 16px;
+  border-bottom:1px solid rgba(48,54,61,.6);
+  transition:background .12s;
+}
+.member-row:active{background:rgba(255,255,255,.04)}
+.member-num{
+  width:32px;font-size:.78rem;color:var(--dim);font-weight:600;flex-shrink:0;
+}
+.member-name{flex:1;font-size:.97rem;font-weight:500}
+.member-del-btn{
+  background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.25);
+  color:var(--danger);border-radius:8px;padding:7px 11px;
+  font-size:.8rem;cursor:pointer;font-weight:600;flex-shrink:0;
+  font-family:'Inter',sans-serif;transition:background .15s;
+}
+.member-del-btn:active{background:rgba(248,81,73,.25)}
+
+/* ── Shuffle view ── */
+#shuffle-view{align-items:center;justify-content:space-between;padding:20px 20px 24px}
+#shuffle-fund-selector{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;
+  gap:10px;cursor:pointer;flex-shrink:0;
+}
+#shuffle-fund-label{flex:1;font-family:'Space Grotesk',sans-serif;font-size:.95rem;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#shuffle-fund-meta{font-size:.75rem;color:var(--dim)}
+
+#shuffle-arena{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;width:100%;
+}
+#shuffle-ring{
+  width:220px;height:220px;border-radius:50%;
+  border:3px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;background:var(--card);
+  transition:border-color .3s;
+}
+#shuffle-ring.rolling{border-color:var(--gold);box-shadow:0 0 28px rgba(240,180,41,.25)}
+#shuffle-ring.done{border-color:var(--green);box-shadow:0 0 28px rgba(63,185,80,.3)}
+#shuffle-name{
+  font-family:'Space Grotesk',sans-serif;font-size:1.25rem;font-weight:700;
+  color:var(--dim);text-align:center;padding:0 20px;
+  line-height:1.3;transition:color .1s;
+  word-break:break-word;
+}
+#shuffle-name.rolling{animation:hueShift .12s infinite alternate}
+@keyframes hueShift{from{color:var(--accent)}to{color:var(--gold)}}
+#shuffle-hint{font-size:.78rem;color:var(--dim);text-align:center}
+
+#shuffle-btn{
+  width:100%;background:var(--gold);color:#0D1117;border:none;
+  border-radius:var(--r);padding:18px;font-size:1.05rem;font-weight:700;
+  cursor:pointer;font-family:'Space Grotesk',sans-serif;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .15s,transform .1s;flex-shrink:0;
+  box-shadow:0 4px 16px rgba(240,180,41,.3);
+}
+#shuffle-btn:active:not(:disabled){transform:scale(.98)}
+#shuffle-btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+/* ── Modal ── */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  backdrop-filter:blur(5px);display:flex;align-items:flex-end;
+  justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:22px 22px 0 0;padding:24px 20px;
+  width:100%;max-width:500px;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,0,.67,0);
+  padding-bottom:calc(20px + var(--safe-bottom));
+}
+#modal-overlay.open .modal{transform:translateY(0);transition-timing-function:cubic-bezier(.33,1,.68,1)}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:14px}
+.modal-input{
+  width:100%;background:var(--card2);border:1.5px solid var(--border);
+  border-radius:var(--rs);padding:14px;color:var(--text);
+  font-size:1rem;font-family:'Inter',sans-serif;outline:none;margin-bottom:14px;
+}
+.modal-input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:10px}
+.modal-btns button{flex:1;padding:13px;border-radius:var(--rs);border:none;
+  font-size:.95rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+.modal-cancel{background:var(--card2);color:var(--text);border:1px solid var(--border)!important}
+.modal-confirm{background:var(--accent);color:#0D1117}
+.modal-cancel:active,.modal-confirm:active{opacity:.8}
+
+/* ── Win overlay ── */
+#win-overlay{
+  position:fixed;inset:0;z-index:200;display:flex;align-items:center;
+  justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s;
+  padding:20px;
+}
+#win-overlay.open{opacity:1;pointer-events:all}
+#win-bg{position:absolute;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px)}
+#win-card{
+  position:relative;background:var(--card);border:2px solid var(--gold);
+  border-radius:24px;padding:36px 28px;text-align:center;width:100%;max-width:360px;
+  transform:scale(.85) translateY(20px);
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+}
+#win-overlay.open #win-card{transform:none}
+#win-emoji{font-size:4rem;display:block;margin-bottom:10px;animation:bounce .9s infinite alternate}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+#win-title{font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;color:var(--gold);margin-bottom:6px}
+#win-sub{font-size:.82rem;color:var(--dim);margin-bottom:20px}
+#win-name{
+  font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;
+  color:var(--accent);background:rgba(88,166,255,.1);
+  border:1.5px solid rgba(88,166,255,.3);border-radius:14px;
+  padding:16px 20px;margin-bottom:24px;word-break:break-word;line-height:1.2;
+}
+#win-close{
+  width:100%;background:var(--gold);color:#0D1117;font-weight:700;border:none;
+  border-radius:12px;padding:14px;font-size:1rem;cursor:pointer;
+  font-family:'Space Grotesk',sans-serif;
+}
+#win-close:active{opacity:.85}
+canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:201}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Fund picker sheet ── */
+#fund-picker{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);z-index:50;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#fund-picker.open{opacity:1;pointer-events:all}
+#fund-picker-sheet{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:22px 22px 0 0;width:100%;max-width:500px;
+  padding:20px 16px;padding-bottom:calc(16px + var(--safe-bottom));
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.33,1,.68,1);
+  max-height:70vh;display:flex;flex-direction:column;
+}
+#fund-picker.open #fund-picker-sheet{transform:translateY(0)}
+.picker-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.picker-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;margin-bottom:12px}
+#picker-list{overflow-y:auto;flex:1}
+.picker-item{
+  padding:14px 12px;border-radius:var(--rs);display:flex;align-items:center;
+  gap:10px;cursor:pointer;transition:background .12s;margin-bottom:2px;
+}
+.picker-item:active{background:var(--card2)}
+.picker-item.selected{background:rgba(88,166,255,.12);color:var(--accent)}
+.picker-item-name{flex:1;font-size:.95rem;font-weight:500}
+.picker-item-count{font-size:.75rem;color:var(--dim)}
+
+#install-banner{position:fixed;left:12px;right:12px;bottom:calc(70px + var(--safe-bottom));background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:slideUp .35s ease}#install-banner[hidden]{display:none}.install-actions{display:flex;gap:8px}#install-btn{background:var(--accent);color:#000;border:none;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer}#dismiss-install{background:transparent;color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;cursor:pointer}@keyframes slideUp{from{transform:translateY(80px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <span class="coin">💰</span>
+    <div id="title-wrap">
+      <span id="app-title" spellcheck="false">Chit Fund Manager</span>
+      <span id="app-subtitle" spellcheck="false">Monthly lottery</span>
+    </div>
+    <button id="edit-btn" onclick="toggleTitleEdit()" title="Edit title">✏️</button>
+  </div>
+
+  <!-- Views -->
+  <div id="body">
+
+    <!-- ① Funds view -->
+    <div id="funds-view" class="view active">
+      <div style="flex-shrink:0;padding:16px 16px 8px">
+        <div class="section-label">Your Funds</div>
+      </div>
+      <div id="fund-scroll" style="flex:1;overflow-y:auto;padding:0 16px 80px"></div>
+      <button class="fab" onclick="openAddFund()">＋</button>
+    </div>
+
+    <!-- ② Members view -->
+    <div id="members-view" class="view">
+      <div id="members-topbar">
+        <button class="back-btn" onclick="showView('funds-view')">‹ Funds</button>
+        <div id="selected-fund-name">—</div>
+        <span id="members-count-badge">0</span>
+      </div>
+      <div id="add-member-bar">
+        <input id="name-input" type="text" placeholder="Member name…"
+               maxlength="60" onkeydown="if(event.key==='Enter')addMember()"/>
+        <button id="add-btn" onclick="addMember()">Add</button>
+      </div>
+      <div id="member-list-wrap"></div>
+    </div>
+
+    <!-- ③ Shuffle view -->
+    <div id="shuffle-view" class="view">
+      <div id="shuffle-fund-selector" onclick="openFundPicker()">
+        <span style="font-size:1.3rem">📁</span>
+        <div style="flex:1;min-width:0">
+          <div id="shuffle-fund-label">Tap to select a fund</div>
+          <div id="shuffle-fund-meta" class="fund-card-meta"></div>
+        </div>
+        <span style="color:var(--dim);font-size:.8rem">▾</span>
+      </div>
+
+      <div id="shuffle-arena">
+        <div id="shuffle-ring">
+          <div id="shuffle-name">🎲 Ready!</div>
+        </div>
+        <div id="shuffle-hint">Pick a fund, then tap Shuffle</div>
+      </div>
+
+      <button id="shuffle-btn" onclick="startShuffle()">🔀 Shuffle &amp; Pick Winner</button>
+    </div>
+
+  </div>
+
+  <!-- Bottom Nav -->
+  <div id="bottom-nav">
+    <button class="nav-item active" data-view="funds-view" onclick="navTo(this,'funds-view')">
+      <span class="nav-icon">📁</span>Funds
+    </button>
+    <button class="nav-item" data-view="members-view" onclick="navToMembers()">
+      <span class="nav-icon">👥</span>Members
+    </button>
+    <button class="nav-item" data-view="shuffle-view" onclick="navTo(this,'shuffle-view')">
+      <span class="nav-icon">🔀</span>Shuffle
+    </button>
+  </div>
+</div>
+
+<!-- Modal (bottom sheet) -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Enter Name</div>
+    <input class="modal-input" id="modal-input" type="text" maxlength="60"
+           onkeydown="if(event.key==='Enter')modalConfirm()"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" onclick="modalConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fund picker sheet -->
+<div id="fund-picker" onclick="if(event.target===this)closeFundPicker()">
+  <div id="fund-picker-sheet">
+    <div class="picker-handle"></div>
+    <div class="picker-title">Select Fund to Shuffle</div>
+    <div id="picker-list"></div>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div id="win-overlay">
+  <div id="win-bg"></div>
+  <div id="win-card">
+    <span id="win-emoji">🎊</span>
+    <div id="win-title">CONGRATULATIONS!</div>
+    <div id="win-sub">This month's chit winner is</div>
+    <div id="win-name"></div>
+    <button id="win-close" onclick="closeWin()">🎉 Awesome!</button>
+  </div>
+</div>
+<canvas id="confetti"></canvas>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const SK = 'chitfund_v2';
+let state = {
+  funds: {'General Fund':['Alice','Bob','Charlie','David','Eve']},
+  currentFund: 'General Fund',
+  shuffleFund: 'General Fund',
+  appTitle: '', appSubtitle: ''
+};
+let modalCb = null;
+let shuffling = false;
+let confettiAF = null;
+let editingTitle = false;
+const COLORS = ['#58A6FF','#F0B429','#3FB950','#BC8CFF','#FF7EB6','#FF6B6B'];
+
+// ── Persist ───────────────────────────────────────────────────────────────────
+function save(){ try{localStorage.setItem(SK,JSON.stringify(state))}catch(e){} }
+function load(){
+  try{
+    const d=localStorage.getItem(SK);
+    if(d) state=JSON.parse(d);
+  }catch(e){}
+  if(!state.funds||!Object.keys(state.funds).length){
+    state.funds={'General Fund':['Alice','Bob','Charlie','David','Eve']};
+    state.currentFund='General Fund'; state.shuffleFund='General Fund';
+  }
+  const keys=Object.keys(state.funds);
+  if(!state.currentFund||!state.funds[state.currentFund]) state.currentFund=keys[0];
+  if(!state.shuffleFund||!state.funds[state.shuffleFund]) state.shuffleFund=keys[0];
+}
+
+// ── View routing ──────────────────────────────────────────────────────────────
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function navTo(btn, viewId){
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showView(viewId);
+  if(viewId==='funds-view') renderFunds();
+  if(viewId==='shuffle-view') renderShuffleHeader();
+}
+function navToMembers(){
+  // If no fund selected go to funds first
+  const btn=document.querySelector('[data-view="members-view"]');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showView('members-view');
+  renderMembers();
+}
+
+// ── Render: Funds ─────────────────────────────────────────────────────────────
+function renderFunds(){
+  const el=document.getElementById('fund-scroll');
+  const keys=Object.keys(state.funds);
+  if(!keys.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">📁</div><div class="empty-text">No funds yet.<br>Tap + to create your first fund.</div></div>`;
+    return;
+  }
+  el.innerHTML='';
+  keys.forEach(name=>{
+    const count=state.funds[name].length;
+    const isActive=name===state.currentFund;
+    const card=document.createElement('div');
+    card.className='fund-card'+(isActive?' active-fund':'');
+    card.innerHTML=`
+      <span class="fund-card-icon">📁</span>
+      <div class="fund-card-info">
+        <div class="fund-card-name">${esc(name)}</div>
+        <div class="fund-card-meta">${count} member${count!==1?'s':''}</div>
+      </div>
+      <div class="fund-card-actions">
+        <button class="icon-btn" title="Rename" onclick="event.stopPropagation();openRenameFund('${esc(name)}')">✎</button>
+        <button class="icon-btn danger" title="Delete" onclick="event.stopPropagation();deleteFund('${esc(name)}')">✕</button>
+      </div>`;
+    card.onclick=()=>openFundMembers(name);
+    el.appendChild(card);
+  });
+}
+
+function openFundMembers(name){
+  state.currentFund=name; save();
+  document.getElementById('selected-fund-name').textContent=name;
+  const btn=document.querySelector('[data-view="members-view"]');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showView('members-view');
+  renderMembers();
+}
+
+// ── Render: Members ───────────────────────────────────────────────────────────
+function renderMembers(){
+  const fund=state.currentFund;
+  const members=state.funds[fund]||[];
+  document.getElementById('selected-fund-name').textContent=fund||'—';
+  document.getElementById('members-count-badge').textContent=members.length;
+  const el=document.getElementById('member-list-wrap');
+  if(!members.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No members yet.<br>Add the first one above.</div></div>`;
+    return;
+  }
+  el.innerHTML='';
+  members.forEach((name,i)=>{
+    const row=document.createElement('div');
+    row.className='member-row';
+    row.innerHTML=`
+      <span class="member-num">${i+1}</span>
+      <span class="member-name">${esc(name)}</span>
+      <button class="member-del-btn" onclick="removeMemberAt(${i})">Remove</button>`;
+    el.appendChild(row);
+  });
+}
+
+// ── Render: Shuffle header ────────────────────────────────────────────────────
+function renderShuffleHeader(){
+  const fund=state.shuffleFund;
+  const count=(state.funds[fund]||[]).length;
+  document.getElementById('shuffle-fund-label').textContent=fund||'Tap to select a fund';
+  document.getElementById('shuffle-fund-meta').textContent=fund?`${count} member${count!==1?'s':''}`:'';
+  if(!shuffling){
+    document.getElementById('shuffle-name').textContent='🎲 Ready!';
+    document.getElementById('shuffle-name').className='';
+    document.getElementById('shuffle-ring').className='';
+    document.getElementById('shuffle-hint').textContent=fund?'Tap Shuffle to pick a winner':'Pick a fund first';
+  }
+}
+
+// ── Fund actions ──────────────────────────────────────────────────────────────
+function openAddFund(){
+  openModal('New Fund','Fund name…',val=>{
+    val=val.trim();
+    if(!val){return;}
+    if(state.funds[val]){alert(`"${val}" already exists.`);return;}
+    state.funds[val]=[];
+    state.currentFund=val; save(); renderFunds();
+  });
+}
+function openRenameFund(old){
+  openModal('Rename Fund',old,val=>{
+    val=val.trim();
+    if(!val||val===old) return;
+    if(state.funds[val]){alert(`"${val}" already exists.`);return;}
+    const rebuilt={};
+    Object.keys(state.funds).forEach(k=>{ rebuilt[k===old?val:k]=state.funds[k]; });
+    state.funds=rebuilt;
+    if(state.currentFund===old) state.currentFund=val;
+    if(state.shuffleFund===old) state.shuffleFund=val;
+    save(); renderFunds();
+  });
+}
+function deleteFund(name){
+  if(!confirm(`Delete "${name}" and all its members?`)) return;
+  delete state.funds[name];
+  const keys=Object.keys(state.funds);
+  if(!keys.length){ state.funds['General Fund']=[]; keys.push('General Fund'); }
+  if(state.currentFund===name) state.currentFund=keys[0];
+  if(state.shuffleFund===name) state.shuffleFund=keys[0];
+  save(); renderFunds();
+}
+
+// ── Member actions ────────────────────────────────────────────────────────────
+function addMember(){
+  const inp=document.getElementById('name-input');
+  const name=inp.value.trim();
+  if(!name) return;
+  if(!state.currentFund){alert('Select a fund first.');return;}
+  if(state.funds[state.currentFund].includes(name)){alert(`"${name}" is already in this fund.`);return;}
+  state.funds[state.currentFund].push(name);
+  inp.value=''; save(); renderMembers();
+  // scroll to bottom
+  const wrap=document.getElementById('member-list-wrap');
+  wrap.scrollTop=wrap.scrollHeight;
+}
+function removeMemberAt(idx){
+  const name=state.funds[state.currentFund][idx];
+  if(!confirm(`Remove "${name}"?`)) return;
+  state.funds[state.currentFund].splice(idx,1);
+  save(); renderMembers();
+}
+
+// ── Fund picker (for shuffle) ─────────────────────────────────────────────────
+function openFundPicker(){
+  const list=document.getElementById('picker-list');
+  list.innerHTML='';
+  Object.keys(state.funds).forEach(name=>{
+    const count=state.funds[name].length;
+    const item=document.createElement('div');
+    item.className='picker-item'+(name===state.shuffleFund?' selected':'');
+    item.innerHTML=`<span style="font-size:1.2rem">📁</span><span class="picker-item-name">${esc(name)}</span><span class="picker-item-count">${count} members</span>`;
+    item.onclick=()=>{
+      state.shuffleFund=name; save();
+      closeFundPicker(); renderShuffleHeader();
+    };
+    list.appendChild(item);
+  });
+  document.getElementById('fund-picker').classList.add('open');
+}
+function closeFundPicker(){ document.getElementById('fund-picker').classList.remove('open'); }
+
+// ── Shuffle ───────────────────────────────────────────────────────────────────
+function startShuffle(){
+  if(shuffling) return;
+  const fund=state.shuffleFund;
+  const members=state.funds[fund]||[];
+  if(!fund){alert('Select a fund first.');return;}
+  if(members.length<2){alert('Add at least 2 members to shuffle.');return;}
+
+  shuffling=true;
+  document.getElementById('shuffle-btn').disabled=true;
+  const winner=members[Math.floor(Math.random()*members.length)];
+  const nameEl=document.getElementById('shuffle-name');
+  const ringEl=document.getElementById('shuffle-ring');
+  const hintEl=document.getElementById('shuffle-hint');
+
+  nameEl.className='rolling';
+  ringEl.className='rolling';
+  hintEl.textContent='Picking…';
+
+  let frame=0, total=32;
+  function tick(){
+    if(frame>=total){
+      nameEl.className='';
+      nameEl.style.color=COLORS[1];
+      nameEl.textContent='🏆 '+winner;
+      ringEl.className='done';
+      hintEl.textContent='Winner selected!';
+      document.getElementById('shuffle-btn').disabled=false;
+      shuffling=false;
+      setTimeout(()=>showWin(winner),300);
+      return;
+    }
+    const t=frame/total;
+    const delay=35+t*t*360;
+    const pick=members[Math.floor(Math.random()*members.length)];
+    nameEl.textContent=pick;
+    nameEl.style.color=COLORS[frame%COLORS.length];
+    frame++;
+    setTimeout(tick,delay);
+  }
+  tick();
+}
+
+// ── Win ───────────────────────────────────────────────────────────────────────
+function showWin(name){
+  document.getElementById('win-name').textContent=name;
+  document.getElementById('win-overlay').classList.add('open');
+  startConfetti();
+}
+function closeWin(){
+  document.getElementById('win-overlay').classList.remove('open');
+  stopConfetti();
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────────────
+function startConfetti(){
+  const cv=document.getElementById('confetti');
+  const ctx=cv.getContext('2d');
+  cv.width=window.innerWidth; cv.height=window.innerHeight;
+  const pieces=Array.from({length:100},()=>({
+    x:Math.random()*cv.width, y:Math.random()*cv.height-cv.height,
+    w:5+Math.random()*8, h:3+Math.random()*5,
+    r:Math.random()*Math.PI*2,
+    vx:(Math.random()-.5)*2, vy:2+Math.random()*4,
+    vr:(Math.random()-.5)*.15,
+    color:COLORS[Math.floor(Math.random()*COLORS.length)]
+  }));
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pieces.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      if(p.y>cv.height){p.y=-20;p.x=Math.random()*cv.width;}
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    confettiAF=requestAnimationFrame(draw);
+  }
+  draw();
+}
+function stopConfetti(){
+  if(confettiAF) cancelAnimationFrame(confettiAF);
+  const cv=document.getElementById('confetti');
+  cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(title,placeholder,cb){
+  document.getElementById('modal-title').textContent=title;
+  const inp=document.getElementById('modal-input');
+  inp.placeholder=placeholder; inp.value='';
+  modalCb=cb;
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>inp.focus(),350);
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCb=null;
+}
+function modalConfirm(){
+  const val=document.getElementById('modal-input').value.trim();
+  const cb=modalCb;
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCb=null;
+  if(cb&&val) cb(val);
+}
+
+// ── Editable title ────────────────────────────────────────────────────────────
+function toggleTitleEdit(){
+  editingTitle=!editingTitle;
+  const t=document.getElementById('app-title');
+  const s=document.getElementById('app-subtitle');
+  const b=document.getElementById('edit-btn');
+  if(editingTitle){
+    t.contentEditable='true'; s.contentEditable='true';
+    t.focus();
+    const r=document.createRange(); r.selectNodeContents(t); r.collapse(false);
+    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    b.textContent='✅'; b.title='Save';
+  } else {
+    t.contentEditable='false'; s.contentEditable='false';
+    const nt=t.textContent.trim()||'Chit Fund Manager';
+    const ns=s.textContent.trim()||'Monthly lottery';
+    t.textContent=nt; s.textContent=ns;
+    state.appTitle=nt; state.appSubtitle=ns;
+    document.title=nt; save();
+    b.textContent='✏️'; b.title='Edit title';
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(editingTitle&&e.key==='Enter'){e.preventDefault();toggleTitleEdit();}
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── PWA SW ────────────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  const sw=`const C='cf2';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll([self.location.pathname]))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+  const blob=new Blob([sw],{type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+
+let deferredPrompt;const banner=document.getElementById("install-banner"),installBtn=document.getElementById("install-btn"),dismissBtn=document.getElementById("dismiss-install");if(localStorage.getItem("installDismissed")==="1")banner.hidden=true;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();if(window.matchMedia("(display-mode: standalone)").matches)return;deferredPrompt=e;if(localStorage.getItem("installDismissed")!=="1")banner.hidden=false;});installBtn&&installBtn.addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;banner.hidden=true;deferredPrompt=null;});dismissBtn&&dismissBtn.addEventListener("click",()=>{banner.hidden=true;localStorage.setItem("installDismissed","1")});window.addEventListener("appinstalled",()=>{banner.hidden=true;localStorage.removeItem("installDismissed")});const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;if(isiOS&&!standalone&&localStorage.getItem("installDismissed")!=="1"){banner.hidden=false;banner.innerHTML='<span>📲 Install this app:<br>Tap <b>Share</b> → <b>Add to Home Screen</b>.</span><button id="dismiss-install">OK</button>';document.getElementById("dismiss-install").onclick=()=>{banner.hidden=true;localStorage.setItem("installDismissed","1")};}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+load();
+if(state.appTitle){ document.getElementById('app-title').textContent=state.appTitle; document.title=state.appTitle; }
+if(state.appSubtitle){ document.getElementById('app-subtitle').textContent=state.appSubtitle; }
+renderFunds();
+renderShuffleHeader();
+</script>
+
+<div id="install-banner" hidden><span>📲 Install this app for a better experience.</span><div class="install-actions"><button id="install-btn">Install</button><button id="dismiss-install">Later</button></div></div>
+
+</body>
+</html>
